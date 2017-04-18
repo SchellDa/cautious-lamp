@@ -18,13 +18,14 @@ struct MpaData {
 class Exporter : public lcio::LCEventListener
 {
 public:
-	Exporter(std::string mpaFile, std::string outputFile, int mpaShift, int numEvents);
+	Exporter(std::string mpaFile, std::string outputFile, int mpaShift, int numEvents, bool telClusters);
 	virtual ~Exporter();
 	void processEvent(lcio::LCEvent* event);
 	void modifyEvent(lcio::LCEvent* event) {}
 
 private:
 	void getTelescopeClusters(lcio::LCEvent* evt, std::vector<float>& xcord, std::vector<float>& ycord, int detectorID);
+	void getTelescopeHits(lcio::LCEvent* evt, std::vector<float>& xcord, std::vector<float>& ycord, int detectorID);
 	void getRefHits(lcio::LCEvent* evt, std::vector<float>& xcord, std::vector<float>& ycord, int detectorID);
 
 	TFile* _infile;
@@ -32,6 +33,7 @@ private:
 	int _shift;
 	size_t _eventsRead;
 	size_t _eventsMax;
+	bool _exportClusters;
 	Conditionals* _conditionalData;
 	std::vector<MpaData> _mpaData;
 	TelescopeData* _telescopeData;

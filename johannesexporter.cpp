@@ -16,9 +16,9 @@
 using namespace eutelescope;
 using namespace lcio;
 
-JohannesExporter::JohannesExporter(std::string mpaFile, std::string outputFile, int mpaShift, int numEvents) :
+JohannesExporter::JohannesExporter(std::string mpaFile, std::string outputFile, int mpaShift, int numEvents, bool exportHits) :
  _infile(new TFile(mpaFile.c_str())), _outfile(new TFile(outputFile.c_str(), "recreate")), _shift(mpaShift),
- _eventsRead(0), _eventsMax(numEvents), _conditionalData(new Conditionals),
+ _eventsRead(0), _eventsMax(numEvents), _exportHits(exportHits), _conditionalData(new Conditionals),
  _conditionalTree(nullptr)
 {
 	if(!_infile || _infile->IsZombie()) {
@@ -106,7 +106,11 @@ void JohannesExporter::processEvent(lcio::LCEvent* event)
 	for(size_t i = 0; i < planeIds.size(); ++i) {
 		std::vector<float> x;
 		std::vector<float> y;
-		getTelescopeClusters(event, x, y, planeIds[i]);
+		if(_exportHits) {
+			getTelescopeHits(event, x, y, planeIds[i]);
+		} else {
+			getTelescopeClusters(event, x, y, planeIds[i]);
+		}
 		assert(x.size() == y.size());
 		TelescopePlaneClusters* plane = (&_telescopeData.p1) + i;
 		plane->x.Clear();
@@ -154,6 +158,35 @@ void JohannesExporter::getTelescopeClusters(lcio::LCEvent* evt, std::vector<floa
 			cluster->getCenterOfGravity(xPos, yPos);
 			xcord.push_back(xPos);
 			ycord.push_back(yPos);
+		}
+	} catch(const std::exception& e) {
+		std::cerr << "Warning Telescope evt " << evt->getEventNumber() <<  ": " << e.what() << std::endl;
+	}
+}
+
+void JohannesExporter::getTelescopeHits(lcio::LCEvent* evt, std::vector<float>& xcord, std::vector<float>& ycord, int detectorID)
+{
+	try {
+		auto collection = evt->getCollection("zsdata_m26");
+		CellIDDecoder<TrackerDataImpl> cellDecoder(collection);
+		xcord.clear();
+		ycord.clear();
+		for(int i=0; i < collection->getNumberOfElements(); i++) {
+			auto data = dynamic_cast<TrackerDataImpl*>(collection->getElementAt(i));
+			assert(data != nullptr);
+			auto type = static_cast<SparsePixelType>(static_cast<int>(cellDecoder(data)["sparsePixelType"]));
+			auto currentDetectorID = static_cast<int>(cellDecoder(data)["sensorID"]);
+			if(currentDetectorID != detectorID) {
+				continue;
+			}
+			assert(type == kEUTelGenericSparsePixel);
+			auto sparseData(new EUTelTrackerDataInterfacerImpl<EUTelGenericSparsePixel> (data));
+			auto sparsePixel(new EUTelGenericSparsePixel);
+			for(size_t i=0; i < sparseData->size(); i++) {
+				sparseData->getSparsePixelAt(i, sparsePixel);
+				xcord.push_back(sparsePixel->getXCoord());
+				ycord.push_back(sparsePixel->getYCoord());
+			}
 		}
 	} catch(const std::exception& e) {
 		std::cerr << "Warning Telescope evt " << evt->getEventNumber() <<  ": " << e.what() << std::endl;

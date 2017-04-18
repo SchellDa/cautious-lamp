@@ -16,9 +16,9 @@
 using namespace eutelescope;
 using namespace lcio;
 
-Exporter::Exporter(std::string mpaFile, std::string outputFile, int mpaShift, int numEvents) :
+Exporter::Exporter(std::string mpaFile, std::string outputFile, int mpaShift, int numEvents, bool telClusters) :
  _infile(new TFile(mpaFile.c_str(), "readonly")), _outfile(new TFile(outputFile.c_str(), "recreate")), _shift(mpaShift),
- _eventsRead(0), _eventsMax(numEvents), _conditionalData(new Conditionals), _telescopeData(new TelescopeData),
+ _eventsRead(0), _eventsMax(numEvents), _exportClusters(telClusters), _conditionalData(new Conditionals), _telescopeData(new TelescopeData),
  _conditionalTreeIn(nullptr), _conditionalTreeOut(nullptr)
 {
 	if(!_infile || _infile->IsZombie()) {
@@ -161,6 +161,35 @@ void Exporter::getTelescopeClusters(lcio::LCEvent* evt, std::vector<float>& xcor
 	}
 }
 
+void Exporter::getTelescopeHits(lcio::LCEvent* evt, std::vector<float>& xcord, std::vector<float>& ycord, int detectorID)
+{
+	try {
+		auto collection = evt->getCollection("zsdata_m26");
+		CellIDDecoder<TrackerPulseImpl> cellDecoder(collection);
+		xcord.clear();
+		ycord.clear();
+		for(int i=0; i < collection->getNumberOfElements(); i++) {
+			auto data = dynamic_cast<TrackerDataImpl*>(collection->getElementAt(000));
+			assert(data != nullptr);
+			auto type = static_cast<SparsePixelType>(static_cast<int>(cellDecoder(data)["type"]));
+			auto currentDetectorID = static_cast<int>(cellDecoder(data)["sensorID"]);
+			if(currentDetectorID != detectorID) {
+				continue;
+			}
+			assert(type == kEUTelGenericSparsePixel);
+			auto sparseData(new EUTelTrackerDataInterfacerImpl<EUTelGenericSparsePixel> (data));
+			auto sparsePixel(new EUTelGenericSparsePixel);
+			for(size_t i=0; i < sparseData->size(); i++) {
+				sparseData->getSparsePixelAt(i, sparsePixel);
+				xcord.push_back(sparsePixel->getXCoord());
+				ycord.push_back(sparsePixel->getYCoord());
+			}
+		}
+	} catch(const std::exception& e) {
+		std::cerr << "Warning Telescope evt " << evt->getEventNumber() <<  ": " << e.what() << std::endl;
+	}
+}
+
 void Exporter::getRefHits(lcio::LCEvent* evt, std::vector<float>& xcord, std::vector<float>& ycord, int detectorID)
 {
 	try {
@@ -168,10 +197,6 @@ void Exporter::getRefHits(lcio::LCEvent* evt, std::vector<float>& xcord, std::ve
 		ycord.clear();
 		// auto collection = evt->getCollection("CMSPixelDUT");
 		LCCollection* collection = nullptr;
-		try {
-			collection = evt->getCollection("zsdata_apix");
-		} catch(const lcio::DataNotAvailableException& e) {
-		}
 		try {
 			if(!collection)
 				collection = evt->getCollection("CMSPixelREF");
