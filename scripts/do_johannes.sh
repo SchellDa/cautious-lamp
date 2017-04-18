@@ -15,3 +15,4 @@ ${HEPHY_MAPSA_DATA_PATH}/run${mparun}.root \
 ${MERGED_HEPHY_PATH}/Jmerged${mparun}.root \
 && correlator ${MERGED_HEPHY_PATH}/Jmerged${mparun}.root \
 ${CORRELATED_HEPHY_PATH}/Jcorr${mparun}.root swap
+mv ${CORRELATED_HEPHY_PATH}/Jcorr${mparun}.root*.png ${IMAGE_HEPHY_PATH}

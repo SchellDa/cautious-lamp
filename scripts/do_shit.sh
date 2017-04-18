@@ -15,3 +15,4 @@ ${KIT_MAPSA_DATA_PATH}/run${mparun}.root \
 ${MERGED_PATH}/merged${mparun}.root \
 && correlator ${MERGED_PATH}/merged${mparun}.root \
 ${CORRELATED_PATH}/corr${mparun}.root swap
+mv ${CORRELATED_PATH}/corr${mparun}.root*.png ${IMAGE_PATH}
