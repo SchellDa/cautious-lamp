@@ -94,7 +94,7 @@ void JohannesExporter::processEvent(lcio::LCEvent* event)
 		          << event->getEventNumber()
 			  << std::flush;
 	}
-	auto bytesRead = _mpaTreeIn->GetEntry(_eventsRead);
+	_mpaTreeIn->GetEntry(_eventsRead);
 	for(size_t mpa = 0; mpa < _mpaData.size(); ++mpa) {
 		_mpaData[mpa].counter.header = _counterIn[mpa].header;
 		for(size_t i = 0; i < 48; ++i) {

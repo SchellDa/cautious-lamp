@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 	int minShift = std::min(telshift, refshift);
 	int maxShift = std::max(telshift, refshift);
 	const auto numEvents = intree->GetEntries();
-	const auto maxEvents = std::min(numEvents + minShift, numEvents);
+	const size_t maxEvents = std::min(numEvents + minShift, numEvents);
 	const auto initialEvent = std::max(0, maxShift);
 	for(size_t evt = initialEvent; evt < maxEvents; ++evt) {
 		if((evt-initialEvent) % 100 == 0) {
