@@ -10,6 +10,7 @@
 #include <cassert>
 #include <sstream>
 #include <algorithm>
+#include <deque>
 #include <TImage.h>
 #include <TCanvas.h>
 
@@ -18,12 +19,17 @@ void correlateTelescopeToTelescope(TelescopePlaneClusters* tel1, TelescopePlaneC
                                    TH2D* histX, TH2D* histY);
 void shiftScan(TTree* tree, std::vector<std::string> mpaNames, const std::vector<MpaData*>& mpaData, TelescopeData* telData, TFile* out, bool swapAxes);
 void shiftRefScan(TTree* tree, std::vector<std::string> mpaNames, const std::vector<MpaData*>& mpaData, TelescopeData* telData, TFile* out, bool swapAxes);
-void writeHistogramPanel(std::string canvasName, std::string fileName, std::string descr, std::vector<TH2D*> histograms);
+void writeHistogramPanel(std::string canvasName, std::string fileName, std::string descr, std::vector<TH2D*> histograms, bool logz=true);
 
-#define TEL_SHIFT_MIN -9
-#define TEL_SHIFT_MAX 3
-#define REF_SHIFT_MIN -9
-#define REF_SHIFT_MAX 3
+#define TEL_SHIFT_MIN -15
+#define TEL_SHIFT_MAX 15
+#define REF_SHIFT_MIN -20
+#define REF_SHIFT_MAX 20
+
+#define TIMECORRELATION_WINDOW_SIZE 10000
+#define TIMECORRELATION_STEP_SIZE 10
+
+#define SKIP_EVENTS 10
 
 #define MPA_RES_X 16
 #define MPA_RES_Y 3
@@ -92,10 +98,9 @@ int main(int argc, char* argv[])
 		std::cout << "MPA axes will be oriented like REF and Tel" << std::endl;
 	}
 	bool calculateShifts = true;
-	int shift = 0;
 	if(argc >= 5) {
+		std::cout << "Shift will not be calculated" << std::endl;;
 		calculateShifts = false;
-		shift = std::stoi(argv[4]);
 	}
 
 	TTree* tree = nullptr;
@@ -104,6 +109,10 @@ int main(int argc, char* argv[])
 		std::cerr << "Root tree 'data' not found in file. Possibly old format?" << std::endl;
 		return 1;
 	}
+	if(numEvents <= 0) {
+		numEvents = tree->GetEntries();
+	}
+	numEvents = std::min(numEvents, tree->GetEntries());
 	std::vector<MpaData*> mpaData;
 	TelescopeData* telData = new TelescopeData;
 	tree->SetBranchAddress("telescope", &telData);
@@ -227,6 +236,53 @@ int main(int argc, char* argv[])
 		residuals[mpa].x[6] = new TH1D("mpa_x_ref", "", MPA_RES_X*10, -xwidth, xwidth);
 		residuals[mpa].y[6] = new TH1D("mpa_y_ref", "", MPA_RES_Y*10, -ywidth, ywidth);
 	}
+	out->mkdir("timecorrelation");
+	out->cd("timecorrelation");
+	std::vector<TH2D*> timecorrelations;
+	int nTimebins = (numEvents - SKIP_EVENTS*2)/TIMECORRELATION_STEP_SIZE;
+	int curTimebin = 0;
+	struct event_correlations_t {
+		std::vector<int> p1;
+		std::vector<int> p2;
+		std::vector<int> p3;
+		std::vector<int> p4;
+		std::vector<int> p5;
+		std::vector<int> p6;
+		std::vector<int> ref;
+	};
+	std::vector<std::deque<event_correlations_t>> timeCorrelationWindows;
+	timeCorrelationWindows.resize(mpaNames.size());
+	for(size_t mpa = 0; mpa < mpaNames.size(); ++mpa) {
+		std::string dir("timecorrelation/mpa_");
+		dir += std::to_string(mpa);
+		out->mkdir(dir.c_str());
+		out->cd(dir.c_str());
+		std::ostringstream xlab;
+		xlab << "Event No. * " << TIMECORRELATION_STEP_SIZE;
+		for(size_t i = 0; i < 6; ++i) {
+			int xwidth = MIMOSA_DYN_X(swapAxes) + MPA_RES_X;
+			std::ostringstream title;
+			title << "MPA " << mpaIndex[mpa] << " <-> Plane " << i << " Residual";
+			auto hist = new TH2D((std::string("mpa_x_plane_")
+						+ std::to_string(i)).c_str(),
+					title.str().c_str(),
+					nTimebins, 0, nTimebins,
+			                MPA_RES_X*8, -xwidth, xwidth);
+			hist->GetXaxis()->SetTitle(xlab.str().c_str());
+			hist->GetYaxis()->SetTitle("Residual");
+			timecorrelations.push_back(hist);
+		}
+		int xwidth = PIXEL_DYN_X(swapAxes) + MPA_RES_X;
+		std::ostringstream title;
+		title << "MPA " << mpaIndex[mpa] << " <-> Reference Residual";
+		auto hist = new TH2D("mpa_x_ref",
+		                     title.str().c_str(),
+		                     nTimebins, 0, nTimebins,
+		                     MPA_RES_X*8, -xwidth, xwidth);
+		hist->GetXaxis()->SetTitle(xlab.str().c_str());
+		hist->GetYaxis()->SetTitle("Residual");
+		timecorrelations.push_back(hist);
+	}
 	out->mkdir("hitmaps");
 	out->cd("hitmaps");
 	std::vector<TH2D*> hitmaps;
@@ -237,32 +293,25 @@ int main(int argc, char* argv[])
 			MPA_RES_Y, 0, MPA_RES_Y);
 		hitmaps.push_back(hitmap);
 	}
-	if(numEvents <= 0) {
-		numEvents = tree->GetEntries();
-	}
-	numEvents = std::min(numEvents, tree->GetEntries());
 	std::vector<TBranch*> mpaBranches(mpaNames.size());
 	for(size_t i = 0; i < mpaNames.size(); ++i) {
 		mpaBranches[i] = tree->FindBranch(mpaNames[i].c_str());
 	}
-	TBranch* telBranch = tree->FindBranch("telescope");
 	int activatedPixels = 0;
 	int processedEvents = 0;
-	for(int i = std::max(0, shift); i < std::min(numEvents, numEvents-shift); ++i, ++processedEvents) {
+	for(int i = 0 + SKIP_EVENTS; i < numEvents - SKIP_EVENTS; ++i, ++processedEvents) {
 		int currentSlice = i / CORRELATION_SLICE_SIZE;
 		assert(currentSlice < telslicehists.size());
-		if(i % 1 == 0) {
+		if(i % 100 == 0) {
 			std::cout << "\r\x1b[K Processing event "
 			          << i << " of " << numEvents
 				  << "  Slice " << currentSlice + 1 << " of " << telslicehists.size()
 				  << std::flush;
 		}
-		for(const auto& branch: mpaBranches) {
-			branch->GetEntry(i);
-		}
-		telBranch->GetEntry(i-shift);
+		tree->GetEntry(i);
 		size_t histIdx = 0;
 		for(size_t mpaIdx = 0; mpaIdx < mpaData.size(); ++mpaIdx) {
+			event_correlations_t currentCorrelations;
 			auto md = mpaData[mpaIdx];
 			for(size_t telIdx = 0; telIdx < 7; ++telIdx) {
 				auto td = (&telData->p1) + telIdx;
@@ -275,6 +324,7 @@ int main(int argc, char* argv[])
 				int tx = 0;
 				int ty = 0;
 				double factor = (mpaIndex[mpaIdx] <= 3)? -1.0 : 1.0;
+				auto curCorPlane = &currentCorrelations.p1 + telIdx;
 				for(size_t px = 0; px < 48; px++) {
 					if(md->counter.pixels[px] != 1) {
 						continue;
@@ -296,14 +346,34 @@ int main(int argc, char* argv[])
 				if(numMpaHits == 1) {
 					residuals[mpaIdx].x[telIdx]->Fill(mx - tx * factor);
 					residuals[mpaIdx].y[telIdx]->Fill(my - ty * factor);
+					curCorPlane->push_back(mx - tx * factor);
 				}
 			}
+			timeCorrelationWindows[mpaIdx].push_back(currentCorrelations);
 			for(size_t px = 0; px < 48; px++) {
 				if(md->counter.pixels[px] > 0) {
 					hitmaps[mpaIdx]->Fill(getPixelX(px), getPixelY(px));
 					++activatedPixels;
 				}
 			}
+		}
+		for(auto& win: timeCorrelationWindows) {
+			while(win.size() > TIMECORRELATION_WINDOW_SIZE) {
+				win.pop_front();
+			}
+		}
+		if(processedEvents % TIMECORRELATION_STEP_SIZE == 0) {
+			for(size_t mpa = 0; mpa < mpaNames.size(); ++mpa) {
+				for(const auto& correlations: timeCorrelationWindows[mpa]) {
+					for(size_t tel = 0; tel < 7; ++tel) {
+						const auto& corPlane = &(correlations.p1) + tel;
+						for(const auto& cor: *corPlane) {
+							timecorrelations[mpa*7 + tel]->Fill(curTimebin, cor);
+						}
+					}
+				}
+			}
+			curTimebin++;
 		}
 		correlateMpaToTelescope(mpaData[0], &telData->p3, telslicehists[currentSlice], nullptr, swapAxes);
 		correlateMpaToTelescope(mpaData[0], &telData->ref, refslicehists[currentSlice], nullptr, swapAxes);
@@ -315,7 +385,10 @@ int main(int argc, char* argv[])
 	          << "I found " << activatedPixels << " pixel activations in all MPAs for " << processedEvents << "processed events\n"
 		  << "That's a yield of " << yield*100 << "%,  estimate " << yield*100*0.35 << "% with REF\n\n"
 	          << "Generate summary images..."
-		  << std::endl;
+		  << std::flush;
+	out->cd("summary");
+	writeHistogramPanel("timecorrelations", getFilename("timecorrelations.png"), "Correlation over time", timecorrelations);
+	std::cout << " done!" << std::endl;
 	in->Close();
 	out->Write();
 	out->Close();
@@ -327,7 +400,7 @@ void shiftRefScan(TTree* tree, std::vector<std::string> mpaNames, const std::vec
 	assert(mpaNames.size() > 0);
 	assert(out != nullptr);
 	assert(tree != nullptr);
-	int numEvents = std::min((Long64_t)20000, tree->GetEntries() - std::abs(REF_SHIFT_MAX) - std::abs(REF_SHIFT_MIN));
+	int numEvents = std::min((Long64_t)30000, tree->GetEntries() - std::abs(REF_SHIFT_MAX) - std::abs(REF_SHIFT_MIN));
 	std::vector<double> summaryShift;
 	std::vector<double> summaryCoefficient;
 	std::cout << "Calculate REF shifts..." << std::endl;;
@@ -350,9 +423,9 @@ void shiftRefScan(TTree* tree, std::vector<std::string> mpaNames, const std::vec
 		shift_name += std::to_string(std::abs(shift));
 		auto refcor = new TH2D((shift_name + "_correlation").c_str(), (std::string("MaPSA X <-> REF Y Correlation at Shift ") + std::to_string(shift)).c_str(),
 				MPA_RES_X, 0, MPA_RES_X,
-				PIXEL_DYN_X(swapAxes)/8, 0, PIXEL_DYN_X(swapAxes));
+				PIXEL_DYN_X(swapAxes)/4, 0, PIXEL_DYN_X(swapAxes));
 		histograms.push_back(refcor);
-		for(int event = shift; event < numEvents; ++event) {
+		for(int event = shift+SKIP_EVENTS; event < numEvents-SKIP_EVENTS; ++event) {
 			std::vector<int> mpaPixels;
 			for(auto branch: mpaBranches) {
 				branch->GetEntry(event);
@@ -410,7 +483,7 @@ void shiftScan(TTree* tree, std::vector<std::string> mpaNames, const std::vector
 		histograms.push_back(xcor);
 		auto res = new TH1D((shift_name + "_residual").c_str(), (std::string("MaPSA X <-> Plane 3 Y Residual Shift ") + std::to_string(shift)).c_str(),
 				MIMOSA_DYN_X(swapAxes), 0, MIMOSA_DYN_X(swapAxes));
-		for(int event = shift; event < numEvents; ++event) {
+		for(int event = shift + SKIP_EVENTS; event < numEvents - SKIP_EVENTS; ++event) {
 			std::vector<int> mpaPixels;
 			for(auto branch: mpaBranches) {
 				branch->GetEntry(event);
@@ -477,7 +550,7 @@ void correlateTelescopeToTelescope(TelescopePlaneClusters* tel1, TelescopePlaneC
 	}
 }
 
-void writeHistogramPanel(std::string canvasName, std::string fileName, std::string descr, std::vector<TH2D*> histograms)
+void writeHistogramPanel(std::string canvasName, std::string fileName, std::string descr, std::vector<TH2D*> histograms, bool logz)
 {
 	size_t num_x = sqrt(histograms.size());
 	size_t num_y = histograms.size()/num_x;
@@ -488,7 +561,9 @@ void writeHistogramPanel(std::string canvasName, std::string fileName, std::stri
 	canvas->Divide(num_x, num_y);
 	for(size_t i = 0; i < histograms.size(); ++i) {
 		canvas->cd(i+1);
-		gPad->SetLogz();
+		if(logz) {
+			gPad->SetLogz();
+		}
 		histograms[i]->Draw("colz");
 	}
 	canvas->Write();
