@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 2.8)
 project(teldqm)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_MODULE_PATH "$ENV{ROOTSYS}/etc/cmake" ${CMAKE_MODULE_PATH}  "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+find_package(ROOT REQUIRED)
 find_package(LCIO REQUIRED)
 find_package(EUTelescope REQUIRED)
-find_package(ROOT REQUIRED)
 find_package(Boost REQUIRED program_options)
+get_cmake_property(_variableNames VARIABLES)
+foreach (_variableName ${_variableNames})
+	    message(STATUS "${_variableName}=${${_variableName}}")
+    endforeach()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -Wextra -Wno-unused-parameter")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pedantic")
@@ -27,7 +31,8 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/dict.cpp ${CMAKE_BINARY_DIR}/dict.
 # Find launcher Bash-Scripts
 file(GLOB SCRIPT_FILES ${PROJECT_SOURCE_DIR}/scripts/*.sh)
 
-include_directories(${LCIO_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS} ${EUTelescope_INCLUDE_DIR})
+include_directories(${LCIO_INCLUDE_DIRS} ${EUTelescope_INCLUDE_DIR})
+include_directories(${ROOT_INCLUDE_DIRS} ${ROOT_INCLUDE_DIR})
 link_directories(${ROOT_LIBRARY_PATH})
 add_executable(datamerger main.cpp datastructures.cpp johannesexporter.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
 add_executable(correlator correlator.cpp datastructures.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
