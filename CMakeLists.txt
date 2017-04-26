@@ -37,13 +37,15 @@ link_directories(${ROOT_LIBRARY_PATH})
 add_executable(datamerger main.cpp datastructures.cpp johannesexporter.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
 add_executable(correlator correlator.cpp datastructures.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
 add_executable(shifter shifter.cpp datastructures.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
+add_executable(dts detailedtimeshifter.cpp datastructures.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
 #add_executable(datamerger main.cpp exporter.cpp)
 #add_executable(correlator correlator.cpp)
 target_link_libraries(datamerger ${LCIO_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} ${EUTelescope_LIBRARIES})
 target_link_libraries(correlator ${ROOT_LIBRARIES})
 target_link_libraries(shifter ${ROOT_LIBRARIES})
+target_link_libraries(dts ${ROOT_LIBRARIES})
 
-install(TARGETS datamerger correlator shifter
+install(TARGETS datamerger correlator shifter dts
 	RUNTIME DESTINATION bin
 	)
 install(FILES ${SCRIPT_FILES} DESTINATION bin
