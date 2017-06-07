@@ -26,7 +26,7 @@ void writeHistogramPanel(std::string canvasName, std::string fileName, std::stri
 #define REF_SHIFT_MIN -20
 #define REF_SHIFT_MAX 20
 
-#define TIMECORRELATION_WINDOW_SIZE 10000
+#define TIMECORRELATION_WINDOW_SIZE 15000
 #define TIMECORRELATION_STEP_SIZE 10
 
 #define SKIP_EVENTS 10
