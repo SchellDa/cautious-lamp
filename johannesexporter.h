@@ -9,18 +9,20 @@
 #include <vector>
 #include <map>
 #include "datastructures.h"
+#include <Eigen/Dense>
+#include <TH1F.h>
 
 class JohannesExporter : public lcio::LCEventListener
 {
 public:
-	JohannesExporter(std::string mpaFile, std::string outputFile, int mpaShift, int numEvents, bool exportHits);
+	JohannesExporter(std::string mpaFile, std::string outputFile, int mpaShift, int numEvents);
 	virtual ~JohannesExporter();
 	void processEvent(lcio::LCEvent* event);
 	void modifyEvent(lcio::LCEvent* event) {}
 
 private:
 	void getTelescopeClusters(lcio::LCEvent* evt, std::vector<float>& xcord, std::vector<float>& ycord, int detectorID);
-	void getTelescopeHits(lcio::LCEvent* evt, std::vector<float>& xcord, std::vector<float>& ycord, int detectorID);
+	void getTelescopeHits(lcio::LCEvent* evt, std::vector<Eigen::Vector3f>& cord, int detectorID);
 	void getRefHits(lcio::LCEvent* evt, std::vector<float>& xcord, std::vector<float>& ycord, int detectorID);
 
 	TFile* _infile;
@@ -28,16 +30,17 @@ private:
 	int _shift;
 	size_t _eventsRead;
 	size_t _eventsMax;
-	bool _exportHits;
 	Conditionals* _conditionalData;
 	std::vector<MpaData> _mpaData;
 	TelescopeData _telescopeData;
+	TelescopeHits  _telescopeHits;
 	TTree* _conditionalTree;
 	TTree* _mpaTreeIn;
 	//std::vector<TTree*> _counterTreeIn;
 	TTree* _mpaTreeOut;
 	std::vector<PlainRippleCounter> _counterIn;
 	std::vector<PlainMemoryNoProcessing> _noProcessingIn;
+	TH1F* _hitZ;
 };
 
 #endif//EXPORTER_H

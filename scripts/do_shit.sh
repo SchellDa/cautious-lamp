@@ -10,7 +10,7 @@ fi
 telrun=`printf "%06i" $(($1))`
 mparun=`printf "%04i" $(($2))`
 
-datamerger ${DQM_LCIO_PATH}/run${telrun}-clustering.slcio \
+datamerger ${DQM_LCIO_PATH}/run${telrun}-hitmaker.slcio \
 ${KIT_MAPSA_DATA_PATH}/run${mparun}.root \
 ${MERGED_PATH}/merged${mparun}.root \
 && correlator ${MERGED_PATH}/merged${mparun}.root \

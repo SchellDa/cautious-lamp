@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 	auto rootFile = join_path(vm["output-dir"].as<std::string>(), vm["output-root"].as<std::string>());
 	lcio::LCReader* lcReader = lcio::LCFactory::getInstance()->createLCReader();
 	lcReader->open(lcioFile);
-	JohannesExporter exporter(mapsaFile, rootFile, vm["mapsa-shift"].as<int>(), vm["num-events"].as<int>(), false);
+	JohannesExporter exporter(mapsaFile, rootFile, vm["mapsa-shift"].as<int>(), vm["num-events"].as<int>());
 	lcReader->registerLCEventListener(&exporter);
 	lcReader->readStream();
 	lcReader->close();
