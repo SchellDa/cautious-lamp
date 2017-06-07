@@ -104,6 +104,10 @@ int main(int argc, char* argv[])
 	std::cout << "Ready to correlate!" << std::endl;
 	std::vector<TH2D*> timecorrelations;
 	int nTimebins = tree->GetEntries() / TIMECORRELATION_STEP_SIZE;
+	if(nTimebins == 0) {
+		std::cout << "Not enough entries! Aborting..." << std::endl;
+		return 2;
+	}
 	int xmax = MIMOSA_DYN_X(swapAxes) / 10 + MPA_RES_X;
 	int xmin = PIXEL_DYN_X(swapAxes) + MPA_RES_X;
 	for(int shift = SHIFT_MIN; shift <= SHIFT_MAX; ++shift) {
