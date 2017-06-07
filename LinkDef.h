@@ -5,4 +5,6 @@
 #pragma link C++ class MpaData;
 #pragma link C++ class TelescopeData;
 #pragma link C++ class TelescopePlaneClusters;
+#pragma link C++ class PlaneHits;
+#pragma link C++ class TelescopeHits;
 #endif

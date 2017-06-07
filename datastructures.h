@@ -69,6 +69,16 @@ public:
 	ClassDef(TelescopePlaneClusters, 1);
 };
 
+class PlaneHits {
+public:
+	TVectorF x;
+	TVectorF y;
+	TVectorF z;
+	PlaneHits();
+	virtual ~PlaneHits() {}
+	ClassDef(PlaneHits, 1);
+};
+
 class TelescopeData {
 public:
 	TelescopePlaneClusters p1;
@@ -81,6 +91,20 @@ public:
 	TelescopeData();
 	virtual ~TelescopeData() {}
 	ClassDef(TelescopeData, 1);
+};
+
+class TelescopeHits {
+public:
+	PlaneHits p1;
+	PlaneHits p2;
+	PlaneHits p3;
+	PlaneHits p4;
+	PlaneHits p5;
+	PlaneHits p6;
+	PlaneHits ref;
+	TelescopeHits();
+	virtual ~TelescopeHits() {}
+	ClassDef(TelescopeHits, 1);
 };
 
 #endif//DATA_STRUCTURES_H

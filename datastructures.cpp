@@ -7,7 +7,9 @@ ClassImp(RippleCounter)
 ClassImp(MemoryNoProcessing)
 ClassImp(MpaData)
 ClassImp(TelescopePlaneClusters)
+ClassImp(PlaneHits)
 ClassImp(TelescopeData)
+ClassImp(TelescopeHits)
 
 Conditionals::Conditionals() :
  threshold(NAN), voltage(NAN), current(NAN),
@@ -36,6 +38,14 @@ TelescopePlaneClusters::TelescopePlaneClusters()
 }
 
 TelescopeData::TelescopeData()
+{
+}
+
+PlaneHits::PlaneHits()
+{
+}
+
+TelescopeHits::TelescopeHits()
 {
 }
 
