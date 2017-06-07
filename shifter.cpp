@@ -56,11 +56,20 @@ int main(int argc, char* argv[])
 		tree->Branch(mpaNames[i].c_str(), &mpaDataOut[i]);
 		mpaBranches.push_back(intree->FindBranch(mpaNames[i].c_str()));
 	}
-	TelescopeData* telData = new TelescopeData;
-	TelescopeData* telDataOut = new TelescopeData;
+	auto telData = new TelescopeData;
+	auto telHits = new TelescopeHits;
+	auto telDataOut = new TelescopeData;
+	auto telHitsOut = new TelescopeHits;
 	intree->SetBranchAddress("telescope", &telData);
+	intree->SetBranchAddress("telhits", &telHits);
 	tree->Branch("telescope", &telDataOut);
+	tree->Branch("telhits", &telHitsOut);
 	auto telBranch = intree->FindBranch("telescope");
+	auto telHitsBranch = intree->FindBranch("telhits");
+	bool fileHasHits = telHitsBranch != nullptr;
+	if(fileHasHits) {
+		std::cout << "File contains hit data. Copying them, too." << std::endl;
+	}
 	int minShift = std::min(telshift, refshift);
 	int maxShift = std::max(telshift, refshift);
 	const auto numEvents = intree->GetEntries();
@@ -77,17 +86,35 @@ int main(int argc, char* argv[])
 			mpaDataOut[i] = mpaData[i];
 		}
 		telBranch->GetEntry(evt - telshift);
+		if(fileHasHits) {
+			telHitsBranch->GetEntry(evt - telshift);
+		}
 		for(size_t i = 0; i < 6; ++i) {
 			auto pi = &telData->p1 + i;
 			auto po = &telDataOut->p1 + i;
 			po->x.ResizeTo(pi->x.GetNoElements());
 			po->y.ResizeTo(pi->y.GetNoElements());
 			*po = *pi;
+			if(fileHasHits) {
+				auto hi = &telHits->p1 + i;
+				auto ho = &telHitsOut->p1 + i;
+				ho->x.ResizeTo(hi->x.GetNoElements());
+				ho->y.ResizeTo(hi->y.GetNoElements());
+				ho->z.ResizeTo(hi->z.GetNoElements());
+				*ho = *hi;
+			}
 		}
 		telBranch->GetEntry(evt - refshift);
+		telHitsBranch->GetEntry(evt - refshift);
 		telDataOut->ref.x.ResizeTo(telData->ref.x.GetNoElements());
 		telDataOut->ref.y.ResizeTo(telData->ref.y.GetNoElements());
 		telDataOut->ref = telData->ref;
+		if(fileHasHits) {
+			telHitsOut->ref.x.ResizeTo(telHits->ref.x.GetNoElements());
+			telHitsOut->ref.y.ResizeTo(telHits->ref.y.GetNoElements());
+			telHitsOut->ref.z.ResizeTo(telHits->ref.z.GetNoElements());
+			telHitsOut->ref = telHits->ref;
+		}
 		tree->Fill();
 	}
 	std::cout << "\r\x1b[K Processing event "
