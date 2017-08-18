@@ -10,4 +10,6 @@ fi
 mparun=`printf "%04i" $(($1))`
 mkdir -p ${IMAGES_PATH}/dts
 dts ${MERGED_PATH}/merged${mparun}.root \
-${IMAGES_PATH}/dts/dts${mparun}.png swap
+${IMAGES_PATH}/dts/dts${mparun}.png \
+${IMAGES_PATH}/dts/dts${mparun}.root \
+swap

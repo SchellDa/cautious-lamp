@@ -51,8 +51,8 @@ int getPixelX(int index)
 
 int main(int argc, char* argv[])
 {
-	if(argc != 4) {
-		std::cerr << "Usage: " << argv[0] << " ROOT-IN IMAGE-OUT (swap|normal)" << std::endl;
+	if(argc != 5) {
+		std::cerr << "Usage: " << argv[0] << " ROOT-IN IMAGE-OUT ROOT-OUT (swap|normal)" << std::endl;
 		return 1;
 	}
 	TFile* in = new TFile(argv[1], "readonly");
@@ -60,22 +60,23 @@ int main(int argc, char* argv[])
 		std::cerr << argv[0] << ": cannot open input file." << std::endl;
 		return 1;
 	}
-//	TFile* out = new TFile(argv[2], "recreate");
-//	if(!out || out->IsZombie()) {
-//		std::cerr << argv[0] << ": cannot open output file." << std::endl;
-//		return 1;
-//	}
 	bool swapAxes = false;
-	if(std::string(argv[3]) == "swap") {
+	if(std::string(argv[4]) == "swap") {
 		swapAxes = true;
-	} else if(std::string(argv[3]) != "normal") {
-		std::cerr << argv[0] << ": Unknown axes mode '" << argv[3] << "'. Must be swap or normal." << std::endl;
+	} else if(std::string(argv[4]) != "normal") {
+		std::cerr << argv[0] << ": Unknown axes mode '" << argv[4] << "'. Must be swap or normal." << std::endl;
 		return 1;
 	}
 	if(swapAxes) {
 		std::cout << "MPA axes will be swapped w.r.t. REF and Tel" << std::endl;
 	} else {
 		std::cout << "MPA axes will be oriented like REF and Tel" << std::endl;
+	}
+
+	TFile* out = new TFile(argv[3], "recreate");
+	if(!out || out->IsZombie()) {
+		std::cerr << argv[0] << ": cannot open output file." << std::endl;
+		return 1;
 	}
 
 	TTree* tree = nullptr;
@@ -145,8 +146,8 @@ int main(int argc, char* argv[])
 	writeHistogramPanel("overview", argv[2], "Overview", timecorrelations, true, swapAxes);
 	in->Close();
 	std::cout << " done!" << std::endl;
-//	out->Write();
-//	out->Close();
+	out->Write();
+	out->Close();
 	return 0;
 }
 
