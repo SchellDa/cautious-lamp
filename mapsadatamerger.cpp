@@ -19,6 +19,7 @@
 #include <IMPL/TrackerPulseImpl.h>
 #include <EUTelAlignmentConstant.h>
 #include <EUTelSparseClusterImpl.h>
+#include <EUTelTrackerDataInterfacer.h>
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
 #include "marlin/Global.h"

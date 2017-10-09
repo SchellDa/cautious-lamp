@@ -6,9 +6,9 @@
 #include <EVENT/TrackerPulse.h>
 #include <EVENT/TrackerData.h>
 #include <UTIL/CellIDDecoder.h>
+#include <EUTelTrackerDataInterfacer.h>
 #include <IMPL/TrackerPulseImpl.h>
 #include <IMPL/TrackerHitImpl.h>
-#include <EUTelSparseClusterImpl.h>
 #include <EUTelGenericSparsePixel.h>
 #include <EUTelSparseClusterImpl.h>
 #include <cassert>
@@ -235,7 +235,8 @@ void JohannesExporter::getRefHits(lcio::LCEvent* evt, std::vector<float>& xcord,
 		auto sparseData(new EUTelTrackerDataInterfacerImpl<EUTelGenericSparsePixel> (data));
 		auto sparsePixel(new EUTelGenericSparsePixel);
 		for(size_t i=0; i < sparseData->size(); i++) {
-			sparseData->getSparsePixelAt(i, sparsePixel);
+		    //sparseData->getSparsePixelAt(i, sparsePixel);
+		   sparseData->at(i);
 			xcord.push_back(sparsePixel->getXCoord());
 			ycord.push_back(sparsePixel->getYCoord());
 		}
