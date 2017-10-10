@@ -60,6 +60,7 @@ class AsciiRoot
 
 
     public:
+	AsciiRoot() {};
         AsciiRoot(const char *nam, const char *pedfile=0, const char *gainfile=0);
         virtual ~AsciiRoot();
 

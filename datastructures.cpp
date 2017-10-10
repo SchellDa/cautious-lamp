@@ -49,6 +49,6 @@ TelescopeHits::TelescopeHits()
 {
 }
 
-AlibavaClusters::AlibavaClusters()
+AlibavaData::AlibavaData()
 {
 }

@@ -38,6 +38,11 @@ include_directories(${LCIO_INCLUDE_DIRS} ${EUTELESCOPE_INCLUDE_DIRS})
 include_directories(${ROOT_INCLUDE_DIRS} ${ROOT_INCLUDE_DIR})
 include_directories(${EIGEN3_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR})
 include_directories(${Marlin_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR}/tools/include)
+
+set(ASCIIROOT_SOURCES ${CMAKE_SOURCE_DIR}/tools/src/AsciiRoot.cc 
+		      ${CMAKE_SOURCE_DIR}/tools/src/Hit.cc
+		      ${CMAKE_SOURCE_DIR}/tools/src/utils.cc)
 
 link_directories(${ROOT_LIBRARY_PATH})
 add_definitions(${Marlin_DEFINITIONS})
@@ -46,7 +51,7 @@ add_executable(correlator correlator.cpp datastructures.cpp ${CMAKE_BINARY_DIR}/
 add_executable(shifter shifter.cpp datastructures.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
 add_executable(dts detailedtimeshifter.cpp datastructures.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
 add_library(MapsaDataMerger SHARED mapsadatamerger.cpp datastructures.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
-add_library(AlibavaDataMerger SHARED alibavadatamerger.cpp datastructures.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
+add_library(AlibavaDataMerger SHARED alibavadatamerger.cpp datastructures.cpp ${ASCIIROOT_SOURCES} ${CMAKE_BINARY_DIR}/dict.cpp)
 #add_executable(datamerger main.cpp exporter.cpp)
 #add_executable(correlator correlator.cpp)
 #target_link_libraries(datamerger ${LCIO_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} ${EUTelescope_LIBRARIES})
@@ -54,7 +59,8 @@ target_link_libraries(correlator ${ROOT_LIBRARIES})
 target_link_libraries(shifter ${ROOT_LIBRARIES})
 target_link_libraries(dts ${ROOT_LIBRARIES})
 target_link_libraries(MapsaDataMerger ${Marlin_LIBRARIES} ${LCIO_LIBRARIES} ${EUTelescope_LIBRARIES} ${ROOT_LIBRARIES})
-target_link_libraries(AlibavaDataMerger ${Marlin_LIBRARIES} ${LCIO_LIBRARIES} ${EUTelescope_LIBRARIES} ${ROOT_LIBRARIES})
+target_link_libraries(AlibavaDataMerger ${Marlin_LIBRARIES} ${LCIO_LIBRARIES} 
+					${EUTelescope_LIBRARIES} ${ROOT_LIBRARIES})
 
 
 install(TARGETS correlator shifter dts 

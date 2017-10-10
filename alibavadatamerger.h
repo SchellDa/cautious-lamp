@@ -60,7 +60,6 @@ protected:
 
     std::vector<int> _includedSensorIds;
 
-    AsciiRoot _alibavaIn;
     TFile* _file;
     TTree* _alibavaTreeIn;
     TTree* _tree;
@@ -68,10 +67,12 @@ protected:
     TelescopeData _telData;
     TelescopeHits _telHits;
     AlibavaData _aliData;
+    AsciiRoot _alibavaIn;
 
 private:
 
     void fillHits(LCCollection*);
+    void fillClusters(LCCollection*);
 
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 #endif

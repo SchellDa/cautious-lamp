@@ -110,8 +110,8 @@ public:
 class AlibavaData {
 public:
 
-    TVectorI event;
-    TVectorI center;
+    TVector event;
+    TVector center;
     TVectorD clock;
     TVectorD time;
     TVectorD temp;

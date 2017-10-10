@@ -32,7 +32,7 @@
 #endif // MARLIN_USE_AIDA
 
 #include "datastructures.h"
-
+//#include "AsciiRoot.h"
 
 using namespace lcio;
 using namespace marlin;
@@ -43,7 +43,7 @@ AlibavaDataMerger aALibavaDataMerger;
 AlibavaDataMerger::AlibavaDataMerger() 
     : Processor("AlibavaDataMerger"), _colHitData(""), _colTelClusterData(""), 
       _colRefClusterData(""), _alibavaFile(""), _rootOutputFile("merged.root"),
-      _includedSensorIds{ 1, 2, 3, 4, 5, 6 }, _file(nullptr) 
+      _includedSensorIds{ 1, 2, 3, 4, 5, 6 }
 {
 
     _description = "Merge telescope and ALiBaVa data";
@@ -99,12 +99,12 @@ void AlibavaDataMerger::init()
     printParameters();
     //bookHistos();
     
-    stream_log(MESSAGE) << "Open ALiBaVa File " << _alibavaFile 
+    streamlog_out(MESSAGE) << "Open ALiBaVa File " << _alibavaFile 
 			<< std::endl;
     
-    _alibavaIn = AsciiRoot(_alibavaFile);
+    _alibavaIn.open(_alibavaFile.c_str());
     
-    if(!_inFile)
+    if(!_alibavaIn.valid())
     {
 	streamlog_out(ERROR) << "Cannon open ALiBaVa file!" << std::endl;
 	throw std::runtime_error("Cannot open ALiBaVa file!");
@@ -148,7 +148,7 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
     _aliData.center.ResizeTo(0);
     _aliData.clock.ResizeTo(0);
     _aliData.time.ResizeTo(0);
-    _aliData.tmep.ResizeTo(0);
+    _aliData.temp.ResizeTo(0);
     _aliData.clusterSignal.ResizeTo(0);    
 
     try {
@@ -160,7 +160,7 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
     
     try {
 	colTelClusterData = evt->getCollection(_colTelClusterData);
-	fillclusters(colTelClusterData);
+	fillClusters(colTelClusterData);
     } catch(lcio::DataNotAvailableException& e) {
 	streamlog_out(DEBUG) << e.what() << std::endl;
     } 
@@ -170,29 +170,35 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
     _alibavaIn.process_event();
     _alibavaIn.find_clusters(-1); // only electron mode
     
-    if( _aliData.empty() ) continue;
+    if()
 
-    // Optimization needed here
-    _aliData.event.ResizeTo(_alibavaIn.nhits());
-    _aliData.center.ResizeTo(_alibavaIn.nhits());
-    _aliData.clock.ResizeTo(_alibavaIn.nhits());
-    _aliData.time.ResizeTo(_alibavaIn.nhits());
-    _aliData.tmep.ResizeTo(_alibavaIn.nhits());
-    _aliData.clusterSignal.ResizeTo(_alibavaIn.nhits());
-
-    AsciiRoot::HitList::iterator ip;
-    for(ip = _alibavaIn.begin(); ip != _alibavaIn.end(); ++ip)
+    if( !_alibavaIn.empty() )
     {
-	    _aliData.event[ip] = evt->getEventNumber();
-	    _aliData.clock[ip] = _alibavaIn.clock();
-	    _aliData.time[ip] = _alibavaIn.time();
-	    _aliData.temp[ip] = _alibavaIn.temp();
 
-	    Hit &h = *ip;
-	    _aliData.clusterSignal[ip] = h.signal();
-	    _aliData.center = h.center();
-    }
-	    
+	    streamlog_out(DEBUG) << "Found ALiBaVa data!" << std::endl;
+	    // Optimization needed here
+	    _aliData.event.ResizeTo(_alibavaIn.nhits());
+	    _aliData.center.ResizeTo(_alibavaIn.nhits());
+	    _aliData.clock.ResizeTo(_alibavaIn.nhits());
+	    _aliData.time.ResizeTo(_alibavaIn.nhits());
+	    _aliData.temp.ResizeTo(_alibavaIn.nhits());
+	    _aliData.clusterSignal.ResizeTo(_alibavaIn.nhits());
+
+	    int icluster = 0;
+	    AsciiRoot::HitList::iterator ip;
+	    for(ip = _alibavaIn.begin(); ip != _alibavaIn.end(); ++ip)
+	    {
+		    _aliData.event[icluster] = evt->getEventNumber();
+		    _aliData.clock[icluster] = _alibavaIn.clock();
+		    _aliData.time[icluster] = _alibavaIn.time();
+		    _aliData.temp[icluster] = _alibavaIn.temp();
+
+		    Hit &h = *ip;
+		    _aliData.clusterSignal[icluster] = h.signal();
+		    _aliData.center = h.center();
+		    ++icluster;
+	    }
+    }	    
     _tree->Fill();
 
 }
