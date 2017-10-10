@@ -169,8 +169,6 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
 
     _alibavaIn.process_event();
     _alibavaIn.find_clusters(-1); // only electron mode
-    
-    if()
 
     if( !_alibavaIn.empty() )
     {
