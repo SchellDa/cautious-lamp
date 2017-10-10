@@ -16,6 +16,7 @@
 #endif
 
 #include "datastructures.h"
+#include "AsciiRoot.h"
 
 using namespace lcio;
 using namespace marlin;
@@ -58,12 +59,15 @@ protected:
     std::string _rootOutputFile;
 
     std::vector<int> _includedSensorIds;
-    
+
+    AsciiRoot _alibavaIn;
     TFile* _file;
+    TTree* _alibavaTreeIn;
     TTree* _tree;
     
     TelescopeData _telData;
     TelescopeHits _telHits;
+    AlibavaData _aliData;
 
 private:
 

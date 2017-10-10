@@ -98,10 +98,20 @@ void AlibavaDataMerger::init()
 
     printParameters();
     //bookHistos();
-
-    /*
-     * ALIBAVA STUFF and root output file structure
-     */
+    
+    stream_log(MESSAGE) << "Open ALiBaVa File " << _alibavaFile 
+			<< std::endl;
+    
+    _alibavaIn = AsciiRoot(_alibavaFile);
+    
+    if(!_inFile)
+    {
+	streamlog_out(ERROR) << "Cannon open ALiBaVa file!" << std::endl;
+	throw std::runtime_error("Cannot open ALiBaVa file!");
+    }
+    
+    _alibavaIn.set_noise_cuts(7.5, 1.5);
+    _alibavaIn.set_cuts(5, 2);
     
     // Output file
 
@@ -109,6 +119,7 @@ void AlibavaDataMerger::init()
     _tree = new TTree("data", "");
     _tree->Branch("telescope", &_telData);
     _tree->Branch("telHits", &_telHits);
+    _tree->Branch("alibava", &_aliData);
 
 }
 
@@ -120,8 +131,6 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
 {
     LCCollection* colHitData = nullptr;
     LCCollection* colTelClusterData = nullptr;
-    LCCollection* colRefClusterData = nullptr;
-
 
     // clear TVector
     for(size_t i = 0; i < 7; ++i) {
@@ -134,6 +143,13 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
 	(&_telData.p1 + i)->y.ResizeTo(0);
     }
 
+    // Optimization needed here
+    _aliData.event.ResizeTo(0);
+    _aliData.center.ResizeTo(0);
+    _aliData.clock.ResizeTo(0);
+    _aliData.time.ResizeTo(0);
+    _aliData.tmep.ResizeTo(0);
+    _aliData.clusterSignal.ResizeTo(0);    
 
     try {
 	colHitData = evt->getCollection(_colHitData);
@@ -142,22 +158,43 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
 	streamlog_out(DEBUG) << e.what() << std::endl;
     } 
     
-/*
     try {
 	colTelClusterData = evt->getCollection(_colTelClusterData);
+	fillclusters(colTelClusterData);
     } catch(lcio::DataNotAvailableException& e) {
 	streamlog_out(DEBUG) << e.what() << std::endl;
     } 
-*/
-    /*
-    try {
-	colRefClusterData = evt->getCollection(_colRefClusterData);
-    } catch(lcio::DataNotAvailableException& e) {
-	streamlog_out(DEBUG) << e.what() << std::endl;
-    } 
-    */
+    
+    _alibavaIn.read_event();
 
+    _alibavaIn.process_event();
+    _alibavaIn.find_clusters(-1); // only electron mode
+    
+    if( _aliData.empty() ) continue;
+
+    // Optimization needed here
+    _aliData.event.ResizeTo(_alibavaIn.nhits());
+    _aliData.center.ResizeTo(_alibavaIn.nhits());
+    _aliData.clock.ResizeTo(_alibavaIn.nhits());
+    _aliData.time.ResizeTo(_alibavaIn.nhits());
+    _aliData.tmep.ResizeTo(_alibavaIn.nhits());
+    _aliData.clusterSignal.ResizeTo(_alibavaIn.nhits());
+
+    AsciiRoot::HitList::iterator ip;
+    for(ip = _alibavaIn.begin(); ip != _alibavaIn.end(); ++ip)
+    {
+	    _aliData.event[ip] = evt->getEventNumber();
+	    _aliData.clock[ip] = _alibavaIn.clock();
+	    _aliData.time[ip] = _alibavaIn.time();
+	    _aliData.temp[ip] = _alibavaIn.temp();
+
+	    Hit &h = *ip;
+	    _aliData.clusterSignal[ip] = h.signal();
+	    _aliData.center = h.center();
+    }
+	    
     _tree->Fill();
+
 }
 
 void AlibavaDataMerger::end()
@@ -166,6 +203,38 @@ void AlibavaDataMerger::end()
 	_file->Write();
 	_file->Close();
     }
+}
+
+void AlibavaDataMerger::fillClusters(LCCollection* col)
+{
+	assert(_includedSensorIds.size() <= 7);
+	try {
+		CellIDDecoder<TrackerPulseImpl> cellDecoder(col);
+		for(int i=0; i < col->getNumberOfElements(); i++) {
+			auto pulse = dynamic_cast<lcio::TrackerPulseImpl*>(col->getElementAt(i));
+			assert(pulse != nullptr);
+			ClusterType type = static_cast<ClusterType>(static_cast<int>(cellDecoder(pulse)["type"]));
+			auto currentDetectorId = static_cast<int>(cellDecoder(pulse)["sensorID"]);
+			int sensorIndex = -1;
+			for(size_t idx = 0; idx < _includedSensorIds.size(); ++idx) {
+				if(currentDetectorId == _includedSensorIds[idx]) {
+					sensorIndex = idx;
+					break;
+				}
+			}
+			if(sensorIndex < 0) {
+				continue;
+			}
+			assert(type == kEUTelSparseClusterImpl);
+			auto cluster = new EUTelSparseClusterImpl<EUTelGenericSparsePixel>(static_cast<TrackerDataImpl*>(pulse->getTrackerData()));
+			auto td = &_telData.p1 + sensorIndex;
+			td->x.ResizeTo(td->x.GetNoElements() + 1);
+			td->y.ResizeTo(td->y.GetNoElements() + 1);
+			cluster->getCenterOfGravity(td->x[td->x.GetNoElements() - 1], td->y[td->x.GetNoElements() - 1]);
+		}
+	} catch(const std::exception& e) {
+//		std::cerr << "Warning Telescope evt " << evt->getEventNumber() <<  ": " << e.what() << std::endl;
+	}
 }
 
 void AlibavaDataMerger::fillHits(LCCollection* col)

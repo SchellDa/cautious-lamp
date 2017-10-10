@@ -107,5 +107,22 @@ public:
 	ClassDef(TelescopeHits, 1);
 };
 
+class AlibavaData {
+public:
+
+    TVectorI event;
+    TVectorI center;
+    TVectorD clock;
+    TVectorD time;
+    TVectorD temp;
+    TVectorD clusterSignal;
+
+    AlibavaData();
+    virtual ~AlibavaData() {};
+    ClassDef(AlibavaData, 1);
+};
+
+
+
 #endif//DATA_STRUCTURES_H
 

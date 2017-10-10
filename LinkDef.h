@@ -7,4 +7,5 @@
 #pragma link C++ class TelescopePlaneClusters;
 #pragma link C++ class PlaneHits;
 #pragma link C++ class TelescopeHits;
+#pragma link C++ class AlibavaData;
 #endif
