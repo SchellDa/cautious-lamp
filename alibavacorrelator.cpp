@@ -58,13 +58,19 @@ int main(int argc, char** argv){
 	oFile->mkdir("ali_tel_cor");
 	oFile->cd("ali_tel_cor");
 	
-	for(int tp = 0; tp < telData->p3.x.GetNoElements(); ++tp) {
-		for(size_t ap = 0; ap < aliData->center.GetNoElements(); ++ap) {
-			corX->Fill(telData->p3.x[tp], aliData->center[ap]);
-			corY->Fill(telData->p3.y[tp], aliData->center[ap]);
+	for(int iEvt = 0; iEvt < inTree->GetEntries(); ++iEvt)
+	{
+
+		inTree->GetEvent(iEvt);
+
+		for(int tp = 0; tp < telData->p3.x.GetNoElements(); ++tp) {
+			for(size_t ap = 0; ap < aliData->center.GetNoElements(); ++ap) {
+				corX->Fill(telData->p3.x[tp], aliData->center[ap]);
+				corY->Fill(telData->p3.y[tp], aliData->center[ap]);
+			}
 		}
 	}
-
+	
 	inFile->Close();
 	oFile->Write();
 	oFile->Close();
