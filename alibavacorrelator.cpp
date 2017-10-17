@@ -15,11 +15,17 @@
 
 #define MIMOSA_N_X 1152
 #define MIMOSA_N_Y 576
+#define FEI4_N_X 80
+#define FEI4_N_Y 336
 #define ALIBAVA_N 256
 
 void correlateAlibavaToTelescope(AlibavaData* aliData, 
 				 TelescopePlaneClusters* planeData, 
 				 TH2F* corX, TH2F* corY);
+void correlateAlibavaToReference(AlibavaData* aliData, 
+				 TelescopePlaneClusters* planeData, 
+				 TH2F* corX, TH2F* corY);
+
 
 int main(int argc, char** argv){
 
@@ -87,6 +93,19 @@ int main(int argc, char** argv){
 		aliTelY.push_back(corY);
 	}
 
+	auto *corX = new TH2F("Ref_Y", 
+			      "Ref_Y <-> Alibava_X",
+			      ALIBAVA_N, 0, ALIBAVA_N, 
+			      FEI4_N_Y, 0, FEI4_N_Y);
+	auto *corY = new TH2F("Ref_X", 
+			      "Ref_X <-> Alibava_Y",				   
+			      ALIBAVA_N, 0, ALIBAVA_N,
+			      FEI4_N_X, 0, FEI4_N_X);
+	aliTelX.push_back(corX);
+	aliTelY.push_back(corY);
+
+
+
 	// Loop over all events and fill the histograms
 	for(int iEvt = 0; iEvt < inTree->GetEntries(); ++iEvt)
 	{
@@ -98,6 +117,11 @@ int main(int argc, char** argv){
 						    aliTelX[telIdx], 
 						    aliTelY[telIdx]);
 		}
+
+		// Reference
+		correlateAlibavaToReference(aliData, &(telData->p1) + 6,
+					    aliTelX[6],
+					    aliTelY[6]);
 	}
 
 	// Get correlation factor
@@ -116,9 +140,9 @@ int main(int argc, char** argv){
 
 	// Create summery plot
 	TCanvas *canvas = new TCanvas("c1", "Correlation Plots", 1920, 1080);
-	canvas->Divide(3,2);
+	canvas->Divide(3,3);
 
-	for(size_t telIdx = 0; telIdx < 6; ++telIdx){
+	for(size_t telIdx = 0; telIdx < 7; ++telIdx){
 		canvas->cd(telIdx+1);
 		aliTelX[telIdx]->Draw("colz");
 	}
@@ -152,5 +176,19 @@ void correlateAlibavaToTelescope(AlibavaData* aliData,
 	}
 }
 
-
+void correlateAlibavaToReference(AlibavaData* aliData, 
+				 TelescopePlaneClusters* planeData, 
+				 TH2F* corX, TH2F* corY)
+{
+	for(int iEvt = 0; iEvt < planeData->x.GetNoElements(); ++iEvt)
+	{
+		//inTree->GetEvent(iEvt);
+		for(int tp = 0; tp < planeData->x.GetNoElements(); ++tp) {
+			for(int ap = 0; ap < aliData->center.GetNoElements(); ++ap) {
+				corX->Fill(aliData->center[ap], planeData->y[tp]);
+				corY->Fill(aliData->center[ap], planeData->x[tp]);
+			}
+		}
+	}
+}
  
