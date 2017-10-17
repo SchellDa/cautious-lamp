@@ -131,6 +131,7 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
 {
     LCCollection* colHitData = nullptr;
     LCCollection* colTelClusterData = nullptr;
+    LCCollection* colRefClusterData = nullptr;
 
     // clear TVector
     for(size_t i = 0; i < 7; ++i) {
@@ -142,6 +143,10 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
 	(&_telData.p1 + i)->x.ResizeTo(0);
 	(&_telData.p1 + i)->y.ResizeTo(0);
     }
+    
+    // Not necessary
+    //&_telHits.ref->x.ResizeTo(0);
+    //&_telHits.ref->y.ResizeTo(0);
 
     // Optimization needed here
     _aliData.event.ResizeTo(0);
@@ -164,7 +169,14 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
     } catch(lcio::DataNotAvailableException& e) {
 	streamlog_out(DEBUG) << e.what() << std::endl;
     } 
-    
+
+    try {
+	colRefClusterData = evt->getCollection(_colRefClusterData);
+	fillClusters(colRefClusterData);
+    } catch(lcio::DataNotAvailableException& e) {
+	streamlog_out(DEBUG) << e.what() << std::endl;
+    } 
+
     _alibavaIn.read_event();
 
     _alibavaIn.process_event();

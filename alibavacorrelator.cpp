@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <fstream>
 
 #include <TFile.h>
 #include <TTree.h>
@@ -98,6 +99,20 @@ int main(int argc, char** argv){
 						    aliTelY[telIdx]);
 		}
 	}
+
+	// Get correlation factor
+	std::vector<Double_t> corFactX;
+	std::ofstream corFact;
+	corFact.open((vm["out"].as<std::string>()+"_cor.csv").c_str());
+	for(const auto* iPlot : aliTelX){
+		corFact << iPlot->GetCorrelationFactor() << ", ";
+	}
+	corFact << std::endl;
+	for(const auto* iPlot : aliTelY){
+		corFact << iPlot->GetCorrelationFactor() << ", ";
+	}
+	corFact.close();
+	
 
 	// Create summery plot
 	TCanvas *canvas = new TCanvas("c1", "Correlation Plots", 1920, 1080);
