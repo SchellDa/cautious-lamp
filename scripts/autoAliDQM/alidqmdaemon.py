@@ -7,7 +7,7 @@ import subprocess
 class ProcessAlibavaTestbeamData(pyinotify.ProcessEvent):
 
     def __init__(self):
-        self.aliFile = 'alibava\d+.dat'
+        self.aliFile = 'run\d{6}.dat'
         self.telFile = 'run\d{6}.raw'
         self.curAliRun = -1
         self.curTelRun = -1
@@ -37,9 +37,9 @@ class ProcessAlibavaTestbeamData(pyinotify.ProcessEvent):
         if self.finAliRun and self.finTelRun:
             print("START ANALYZING ALIBAVA RUN {0} AND TELESCOPE RUN {1}"
                   .format(self.curAliRun, self.curTelRun))
-            subprocess.Popen("./startDQM.sh {0} {1}"
-                             .format(self.curAliRun, self.curTelRun), 
-                             shell=True)
+            #subprocess.Popen("./startDQM.sh {0} {1}"
+            #                 .format(self.curAliRun, self.curTelRun), 
+            #                 shell=True)
             self.finAliRun = False
             self.finTelRun = False
             
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     wm = pyinotify.WatchManager()
     handler = ProcessAlibavaTestbeamData()
     notifier = pyinotify.Notifier(wm, handler)
-    mask = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_CREATE
+    mask = pyinotify.IN_CLOSE_WRITE | pyinotify.IN_CREATE | pyinotify.IN_MODIFY
 
     wm.add_watch(args.alibava, mask, rec=True)
     wm.add_watch(args.telescope, mask, rec=True)
