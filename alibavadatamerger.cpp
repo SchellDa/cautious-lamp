@@ -257,38 +257,38 @@ void AlibavaDataMerger::fillHits(LCCollection* col)
 {
     assert(_includedSensorIds.size() <= 7); // 6 telescope + 1 REF
     try {
-	// Encoding
-	CellIDDecoder<TrackerHitImpl> cellDecoder("sensorID:7,properties:7");
-	for(int i=0; i < col->getNumberOfElements(); i++) {
-	    auto hit = dynamic_cast<TrackerHitImpl*> (col->getElementAt(i));
-	    assert(hit != nullptr);
-	    auto currentDetectorId = static_cast<int> (cellDecoder(hit)
-						       ["sensorID"]);
-	    int sensorIndex = -1; //reset 
-	    for(size_t idx=0; idx < _includedSensorIds.size(); ++idx){
-		if(currentDetectorId == _includedSensorIds[idx]) {
-		    sensorIndex = idx;
-		    break;
-		}
-	    }
+	    // Encoding
+	    CellIDDecoder<TrackerHitImpl> cellDecoder("sensorID:7,properties:7");
+	    for(int i=0; i < col->getNumberOfElements(); i++) {
+		    auto hit = dynamic_cast<TrackerHitImpl*> (col->getElementAt(i));
+		    assert(hit != nullptr);
+		    auto currentDetectorId = static_cast<int> (cellDecoder(hit)
+							       ["sensorID"]);
+		    int sensorIndex = -1; //reset 
+		    for(size_t idx=0; idx < _includedSensorIds.size(); ++idx){
+			    if(currentDetectorId == _includedSensorIds[idx]) {
+				    sensorIndex = idx;
+				    break;
+			    }
+		    }
 
-	    if(sensorIndex < 0) {
-		continue;
+		    if(sensorIndex < 0) {
+			    continue;
+		    }
+	    
+		    // Resize TVectors
+		    auto td = &_telHits.p1 + sensorIndex;
+		    td->x.ResizeTo(td->x.GetNoElements() + 1);
+		    td->y.ResizeTo(td->y.GetNoElements() + 1);
+		    td->z.ResizeTo(td->z.GetNoElements() + 1);
+	    
+		    // Fill TVector
+		    auto pos = hit->getPosition();
+		    td->x[td->x.GetNoElements() - 1] = pos[0];
+		    td->y[td->y.GetNoElements() - 1] = pos[1];
+		    td->z[td->z.GetNoElements() - 1] = pos[2];
+		    
 	    }
-	    
-	    // Resize TVectors
-	    auto td = &_telHits.p1 + sensorIndex;
-	    td->x.ResizeTo(td->x.GetNoElements() + 1);
-	    td->y.ResizeTo(td->y.GetNoElements() + 1);
-	    td->z.ResizeTo(td->z.GetNoElements() + 1);
-	    
-	    // Fill TVector
-	    auto pos = hit->getPosition();
-	    td->x[td->x.GetNoElements() - 1] = pos[0];
-	    td->y[td->y.GetNoElements() - 1] = pos[1];
-	    td->z[td->z.GetNoElements() - 1] = pos[2];
-	    
-	}
     } catch (const std::exception& e) {
     }
 }					       
