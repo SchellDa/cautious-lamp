@@ -182,11 +182,12 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
     _alibavaIn.process_event();
     _alibavaIn.find_clusters(-1); // only electron mode
 
-    if( !_alibavaIn.empty() )
-    {
+    if( !_alibavaIn.empty() ) {
 
 	    streamlog_out(DEBUG) << "Found ALiBaVa data!" << std::endl;
 	    // Optimization needed here
+	    // We have to add at least a 0 element for
+	    // the timing information
 	    _aliData.event.ResizeTo(_alibavaIn.nhits());
 	    _aliData.center.ResizeTo(_alibavaIn.nhits());
 	    _aliData.clock.ResizeTo(_alibavaIn.nhits());
@@ -208,6 +209,22 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
 		    _aliData.center = h.center();
 		    ++icluster;
 	    }
+    } else {	
+	    
+	    _aliData.event.ResizeTo(1);	    
+	    _aliData.clock.ResizeTo(1);
+	    _aliData.time.ResizeTo(1);
+	    //_aliData.temp.ResizeTo(1);
+	    //_aliData.clusterSignal.ResizeTo(1);
+            //_aliData.center.ResizeTo(1);
+	    
+	    _aliData.event[0] = evt->getEventNumber();
+	    _aliData.clock[0] = _alibavaIn.clock();
+	    _aliData.time[0] = _alibavaIn.time();
+	    //_aliData.temp[0] = _alibavaIn.temp();
+	    //_aliData.clusterSignal[0] = 0;
+	    //_aliData.center = -1;
+	    
     }	    
     _tree->Fill();
 

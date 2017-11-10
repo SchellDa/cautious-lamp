@@ -46,6 +46,7 @@ set(ASCIIROOT_SOURCES ${CMAKE_SOURCE_DIR}/tools/src/AsciiRoot.cc
 
 link_directories(${ROOT_LIBRARY_PATH})
 add_definitions(${Marlin_DEFINITIONS})
+add_definitions("--std=c++11")
 
 #add_executable(datamerger main.cpp datastructures.cpp johannesexporter.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
 add_executable(correlator correlator.cpp datastructures.cpp ${CMAKE_BINARY_DIR}/dict.cpp)
