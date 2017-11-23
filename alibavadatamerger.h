@@ -56,10 +56,19 @@ protected:
     std::string _colRefClusterData;
 
     std::string _alibavaFile;
-    std::string _rootOutputFile;
+	std::string _alibavaPedFile;
+	std::string _alibavaCalibFile;
+	std::string _rootOutputFile;
 
     std::vector<int> _includedSensorIds;
     double _seedCut;
+	double _neighborCut;
+	double _minNoise;
+	double _maxNoise;
+	double _nPedEvents;
+	double _pedStartEvent;
+	double _noise;
+	double _sigPol;
 
     TFile* _file;
     TTree* _alibavaTreeIn;
@@ -69,6 +78,8 @@ protected:
     TelescopeHits _telHits;
     AlibavaData _aliData;
     AsciiRoot _alibavaIn;
+	AsciiRoot _alibavaPed;
+	AsciiRoot _alibavaCalib;
 
 private:
 

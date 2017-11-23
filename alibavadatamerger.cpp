@@ -1,5 +1,6 @@
 #include "alibavadatamerger.h"
 #include <iostream>
+#include <sstream>
 
 #include <EVENT/LCCollection.h>
 #include <EVENT/MCParticle.h>
@@ -42,8 +43,8 @@ AlibavaDataMerger aALibavaDataMerger;
 
 AlibavaDataMerger::AlibavaDataMerger() 
     : Processor("AlibavaDataMerger"), _colHitData(""), _colTelClusterData(""), 
-      _colRefClusterData(""), _alibavaFile(""), _rootOutputFile("merged.root"),
-      _includedSensorIds{ 1, 2, 3, 4, 5, 6 }, _seedCut(5)
+      _colRefClusterData(""), _alibavaFile(""), _alibavaPedFile(""), _alibavaCalibFile(""),
+	  _rootOutputFile("merged.root"), _includedSensorIds{ 1, 2, 3, 4, 5, 6 }, _seedCut(5)
 {
 
     _description = "Merge telescope and ALiBaVa data";
@@ -79,6 +80,18 @@ AlibavaDataMerger::AlibavaDataMerger()
 	_alibavaFile
 	);
     registerProcessorParameter(
+	"AlibavaPedestalFile",
+	"Path of the Alibava pedestal file",
+	_alibavaPedFile,
+	_alibavaPedFile
+	);
+    registerProcessorParameter(
+	"AlibavaCalibFile",
+	"Path of the Alibava calibration file",
+	_alibavaCalibFile,
+	_alibavaCalibFile
+	);
+    registerProcessorParameter(
 	"RootOutputFilename",
 	"Path of the ROOT output file",
 	_rootOutputFile,
@@ -96,6 +109,43 @@ AlibavaDataMerger::AlibavaDataMerger()
 	_seedCut,
 	_seedCut
 	);
+    registerProcessorParameter(
+	"NeighborCut",
+	"Neighbor cut for clustering algorithm",
+	_neighborCut,
+	_neighborCut
+	);
+    registerProcessorParameter(
+	"MinNoise",
+	"Minimal noise cut",
+	_minNoise,
+	_minNoise
+	);
+    registerProcessorParameter(
+	"MaxNoise",
+	"Maximum noise cut",
+	_maxNoise,
+	_maxNoise
+	);
+	registerProcessorParameter(
+	"NPedestalEvents",
+	"Number of pedestal events",
+	_nPedEvents,
+	_nPedEvents
+	);
+    registerProcessorParameter(
+	"PedestalStartEvent",
+	"First pedestal event",
+	_pedStartEvent,
+	_pedStartEvent
+	);
+	registerProcessorParameter(
+	"Polarity",
+	"Signal polarity",
+	_sigPol,
+	_sigPol
+	);
+
 }
 
 void AlibavaDataMerger::init()
@@ -104,20 +154,43 @@ void AlibavaDataMerger::init()
 
     printParameters();
     //bookHistos();
-    
+
+	std::string pedFile = "/tmp/alibava.ped";
+	streamlog_out(MESSAGE) << "Open ALiBaVa pedestal file " << _alibavaPedFile 
+						   << std::endl;
+
+	std::ostringstream pedRootFile;
+	pedRootFile << _alibavaFile.substr(0, _alibavaFile.find_last_of(".")) << "_ped.root";
+	
+	_alibavaPed.open(_alibavaPedFile.c_str());
+	_alibavaPed.set_noise_cuts(_maxNoise, _minNoise);
+	_alibavaPed.compute_pedestals(_pedStartEvent, _nPedEvents, true, 
+								  const_cast<char*>(pedRootFile.str().c_str()), _sigPol);
+	_alibavaPed.save_pedestals(pedFile.c_str());
+	_noise = _alibavaPed.noisevalue;
+
+	streamlog_out(MESSAGE) << "Noise: " << _noise << std::endl;
+	/*
+	streamlog_out(MESSAGE) << "Open ALiBaVa calibration file: " << std::endl;	
+	
+	_alibavaCalib.open(_alibavaCalibFile.c_str());
+	_alibavaCalib.set_noise_cuts(_maxNoise, _minNoise);
+	_alibavaCalib.load_pedestals(pedFile.c_str());
+	*/
     streamlog_out(MESSAGE) << "Open ALiBaVa File " << _alibavaFile 
 			<< std::endl;
-    
+  
     _alibavaIn.open(_alibavaFile.c_str());
     
     if(!_alibavaIn.valid())
     {
-	streamlog_out(ERROR) << "Cannon open ALiBaVa file!" << std::endl;
-	throw std::runtime_error("Cannot open ALiBaVa file!");
+		streamlog_out(ERROR) << "Cannot open ALiBaVa file!" << std::endl;
+		throw std::runtime_error("Cannot open ALiBaVa file!");
     }
     
-    _alibavaIn.set_noise_cuts(7.5, 1.5);
-    _alibavaIn.set_cuts(_seedCut, 2);
+    _alibavaIn.set_noise_cuts(_maxNoise, _minNoise);
+	_alibavaIn.load_pedestals(pedFile.c_str());
+    _alibavaIn.set_cuts(_seedCut, _neighborCut);
     
     // Output file
 

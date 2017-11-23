@@ -52,7 +52,7 @@ class AsciiRoot
 	XtraValues _xtra; // extra values from header
        	unsigned short _header[2][16];
 
-	double noisevalue;
+
 
     protected:
         void reset_data();
@@ -289,7 +289,7 @@ class AsciiRoot
         void add_xtra(const std::string &x) { _xtra.push_back(x); }
         void add_xtra(const char *x) { _xtra.push_back(x); }
 
-
+		double noisevalue;
 };
 
 
