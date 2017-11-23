@@ -43,7 +43,7 @@ AlibavaDataMerger aALibavaDataMerger;
 AlibavaDataMerger::AlibavaDataMerger() 
     : Processor("AlibavaDataMerger"), _colHitData(""), _colTelClusterData(""), 
       _colRefClusterData(""), _alibavaFile(""), _rootOutputFile("merged.root"),
-      _includedSensorIds{ 1, 2, 3, 4, 5, 6 }
+      _includedSensorIds{ 1, 2, 3, 4, 5, 6 }, _seedCut(5)
 {
 
     _description = "Merge telescope and ALiBaVa data";
@@ -90,6 +90,12 @@ AlibavaDataMerger::AlibavaDataMerger()
 	_includedSensorIds,
 	_includedSensorIds
 	);
+    registerProcessorParameter(
+	"SeedCut",
+	"Seed cut for clustering algorithm",
+	_seedCut,
+	_seedCut
+	);
 }
 
 void AlibavaDataMerger::init()
@@ -111,7 +117,7 @@ void AlibavaDataMerger::init()
     }
     
     _alibavaIn.set_noise_cuts(7.5, 1.5);
-    _alibavaIn.set_cuts(5, 2);
+    _alibavaIn.set_cuts(_seedCut, 2);
     
     // Output file
 
@@ -186,8 +192,6 @@ void AlibavaDataMerger::processEvent(LCEvent* evt)
 
 	    streamlog_out(DEBUG) << "Found ALiBaVa data!" << std::endl;
 	    // Optimization needed here
-	    // We have to add at least a 0 element for
-	    // the timing information
 	    _aliData.event.ResizeTo(_alibavaIn.nhits());
 	    _aliData.center.ResizeTo(_alibavaIn.nhits());
 	    _aliData.clock.ResizeTo(_alibavaIn.nhits());

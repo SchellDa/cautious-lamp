@@ -59,6 +59,7 @@ protected:
     std::string _rootOutputFile;
 
     std::vector<int> _includedSensorIds;
+    double _seedCut;
 
     TFile* _file;
     TTree* _alibavaTreeIn;
