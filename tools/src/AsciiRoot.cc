@@ -154,7 +154,7 @@ void AsciiRoot::open(const char *name)
     header = trim_str(header);
     std::cout <<" header: " << header << std::endl;
 
-   if (header[0]!='V' && header[0]!='v')
+    if (header[0]!='V' && header[0]!='v')
     {
         _version = 0;
     }

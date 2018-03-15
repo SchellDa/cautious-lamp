@@ -1,6 +1,7 @@
 #include "alibavadatamerger.h"
 #include <iostream>
 #include <sstream>
+#include <fstream>
 
 #include <EVENT/LCCollection.h>
 #include <EVENT/MCParticle.h>
@@ -44,7 +45,7 @@ AlibavaDataMerger aALibavaDataMerger;
 AlibavaDataMerger::AlibavaDataMerger() 
     : Processor("AlibavaDataMerger"), _colHitData(""), _colTelClusterData(""), 
       _colRefClusterData(""), _alibavaFile(""), _alibavaPedFile(""), _alibavaCalibFile(""),
-	  _rootOutputFile("merged.root"), _includedSensorIds{ 1, 2, 3, 4, 5, 6 }, _seedCut(5)
+      _rootOutputFile("merged.root"), _maskFile(""), _includedSensorIds{ 1, 2, 3, 4, 5, 6 }, _seedCut(5)
 {
 
     _description = "Merge telescope and ALiBaVa data";
@@ -127,7 +128,7 @@ AlibavaDataMerger::AlibavaDataMerger()
 	_maxNoise,
 	_maxNoise
 	);
-	registerProcessorParameter(
+    registerProcessorParameter(
 	"NPedestalEvents",
 	"Number of pedestal events",
 	_nPedEvents,
@@ -139,66 +140,89 @@ AlibavaDataMerger::AlibavaDataMerger()
 	_pedStartEvent,
 	_pedStartEvent
 	);
-	registerProcessorParameter(
+    registerProcessorParameter(
 	"Polarity",
 	"Signal polarity",
 	_sigPol,
 	_sigPol
 	);
-
+    registerProcessorParameter(
+	"MaskFile",
+	"MaskFile",
+	_maskFile,
+	_maskFile
+	);
+	
 }
 
 void AlibavaDataMerger::init()
 {
-    streamlog_out(DEBUG) << " init called " << std::endl;
+	streamlog_out(DEBUG) << " init called " << std::endl;
 
-    printParameters();
-    //bookHistos();
-
+	printParameters();
+	//bookHistos();
+	
 	std::string pedFile = "/tmp/alibava.ped";
-	streamlog_out(MESSAGE) << "Open ALiBaVa pedestal file " << _alibavaPedFile 
-						   << std::endl;
+	if(!_alibavaPedFile.empty())
+	{
+		streamlog_out(MESSAGE) << "Open ALiBaVa pedestal file " << _alibavaPedFile 
+				       << std::endl;
 
-	std::ostringstream pedRootFile;
-	pedRootFile << _alibavaFile.substr(0, _alibavaFile.find_last_of(".")) << "_ped.root";
+		std::ostringstream pedRootFile;
+		pedRootFile << _alibavaFile.substr(0, _alibavaFile.find_last_of(".")) << "_ped.root";
 	
-	_alibavaPed.open(_alibavaPedFile.c_str());
-	_alibavaPed.set_noise_cuts(_maxNoise, _minNoise);
-	_alibavaPed.compute_pedestals(_pedStartEvent, _nPedEvents, true, 
-								  const_cast<char*>(pedRootFile.str().c_str()), _sigPol);
-	_alibavaPed.save_pedestals(pedFile.c_str());
-	_noise = _alibavaPed.noisevalue;
+		_alibavaPed.open(_alibavaPedFile.c_str());
+		_alibavaPed.set_noise_cuts(_maxNoise, _minNoise);
+		_alibavaPed.compute_pedestals(_pedStartEvent, _nPedEvents, true, 
+					      const_cast<char*>(pedRootFile.str().c_str()), _sigPol);
+		_alibavaPed.save_pedestals(pedFile.c_str());
+		_noise = _alibavaPed.noisevalue;
 
-	streamlog_out(MESSAGE) << "Noise: " << _noise << std::endl;
-	/*
-	streamlog_out(MESSAGE) << "Open ALiBaVa calibration file: " << std::endl;	
-	
-	_alibavaCalib.open(_alibavaCalibFile.c_str());
-	_alibavaCalib.set_noise_cuts(_maxNoise, _minNoise);
-	_alibavaCalib.load_pedestals(pedFile.c_str());
-	*/
-    streamlog_out(MESSAGE) << "Open ALiBaVa File " << _alibavaFile 
-			<< std::endl;
+		streamlog_out(MESSAGE) << "Noise: " << _noise << std::endl;
+	}
+	streamlog_out(MESSAGE) << "Open ALiBaVa File " << _alibavaFile 
+			       << std::endl;
   
-    _alibavaIn.open(_alibavaFile.c_str());
+	_alibavaIn.open(_alibavaFile.c_str());
     
-    if(!_alibavaIn.valid())
-    {
+	if(!_alibavaIn.valid())
+	{
 		streamlog_out(ERROR) << "Cannot open ALiBaVa file!" << std::endl;
 		throw std::runtime_error("Cannot open ALiBaVa file!");
-    }
+	}
     
-    _alibavaIn.set_noise_cuts(_maxNoise, _minNoise);
-	_alibavaIn.load_pedestals(pedFile.c_str());
-    _alibavaIn.set_cuts(_seedCut, _neighborCut);
-    
-    // Output file
+	// Set Mask
+	std::ifstream maskFile(_maskFile, std::ifstream::in);
+	if(maskFile) {
+		std::vector<int> mask;
+		std::string line;
+	
+		while(std::getline(maskFile, line)) 
+		{
+			mask.emplace_back(std::stoi(line));
+		}
+	
+		std::cout << "Mask channels:\n";
+		for(const auto& channel: mask) {
+			std::cout << channel << std::endl; 
+			_alibavaIn.add_mask_channel(channel);
+		}		
+	} else {
+		std::cout << "No mask defined" << std::endl;
+	}
 
-    _file = new TFile(_rootOutputFile.c_str(), "RECREATE");
-    _tree = new TTree("data", "");
-    _tree->Branch("telescope", &_telData);
-    _tree->Branch("telHits", &_telHits);
-    _tree->Branch("alibava", &_aliData);
+	_alibavaIn.set_noise_cuts(_maxNoise, _minNoise);
+	if(!_alibavaPedFile.empty()) 
+		_alibavaIn.load_pedestals(pedFile.c_str());
+	_alibavaIn.set_cuts(_seedCut, _neighborCut);
+    
+	// Output file
+
+	_file = new TFile(_rootOutputFile.c_str(), "RECREATE");
+	_tree = new TTree("data", "");
+	_tree->Branch("telescope", &_telData);
+	_tree->Branch("telHits", &_telHits);
+	_tree->Branch("alibava", &_aliData);
 
 }
 
