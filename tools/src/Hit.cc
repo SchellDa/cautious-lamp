@@ -1,6 +1,6 @@
 #include "Hit.h"
 
-Hit::Hit(int c, int l, int r, double s, double s_c) :
+Hit::Hit(double c, int l, int r, double s, double s_c) :
   _center(c), _left(l), _right(r), _sig(s), _sig_cal(s_c)
 {
 }

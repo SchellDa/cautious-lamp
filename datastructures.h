@@ -111,7 +111,7 @@ class AlibavaData {
 public:
 
     TVector event;
-    TVector center;
+    TVectorD center;
     TVectorD clock;
     TVectorD time;
     TVectorD temp;

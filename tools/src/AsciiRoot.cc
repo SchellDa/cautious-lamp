@@ -812,7 +812,7 @@ void AsciiRoot::find_clusters(double polarity, int ichip)
     }
 }
 */
-
+/*
 /////mal unverändert
 void AsciiRoot::find_clusters(double polarity, int ichip)
 {
@@ -901,7 +901,104 @@ void AsciiRoot::find_clusters(double polarity, int ichip)
         add_hit(Hit(imax, left, right, sg, sg_cal));
     }
 }
+*/
 
+void AsciiRoot::find_clusters(double polarity, int ichip)
+{
+    int i, left, right;
+    double imax=-1;
+    double mxsig=-1.e20, sg, sg_cal, val, sg_l, sg_r;
+    bool used[256];
+    int chan0=0;
+    int chan1=256;
+    
+    if (ichip>=0 && ichip<2)
+    {
+        chan0 = ichip*128;
+        chan1 = (ichip+1)*128;
+    }
+    
+    
+    for (i=0;i<256;i++)
+    {
+        used[i]= _mask[i] ? true : false;
+    }
+    clear();
+
+        
+    while (true)
+    {
+    /////////////
+    ///////// Find the highest 
+    //////////
+        imax = -1;
+        for (i=chan0; i<chan1; i++)
+        {
+	  if (used[i] || signal(i)*polarity<0.)
+                continue;
+            
+            if (fabs(sn(i))>_seedcut)
+            {
+                val = fabs(signal(i));
+                if (mxsig<val)
+                {
+                    mxsig = val;
+                    imax = i;
+                }
+            }
+        }
+
+        if (imax<0)
+            break;
+
+        sg = signal(imax);
+        sg_cal = signal_cal(imax);
+        used[(int)imax]=true;
+        // Now look at neighbours
+        // first to the left
+	sg_l = 0;
+        left = imax;
+        for (i=imax-1;i>=0;i=i-1)
+        {
+	  if ( signal(i)*polarity<0.)
+                break;
+            
+            if ( fabs(sn(i)) > _neighcut )
+            {
+                used[i] = true;
+                //sg += signal(i);
+		sg_l += signal(i);
+                sg_cal += signal_cal(i);
+                left = i;
+            }
+            else
+                break;
+        }
+        // now to the right
+	sg_r = 0;
+        right = imax;
+        for (i=imax+1;i<256;i++)
+        {
+	  if ( signal(i)*polarity<0.)
+                break;
+            if ( fabs(sn(i))>_neighcut )
+            {
+                used[i] = true;
+		sg_r += signal(i);
+                //sg += signal(i);
+                sg_cal += signal_cal(i);
+                right = i;
+            }
+            else
+                break;
+        }
+	
+	double sg_tot = sg + sg_r + sg_l;
+	imax = (imax*sg + right*sg_r + left*sg_l)/sg_tot;
+
+        add_hit(Hit(imax, left, right, sg_tot, sg_cal));
+    }
+}
 
 
 void AsciiRoot::save_pedestals(const char *fnam)
